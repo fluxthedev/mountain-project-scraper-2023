@@ -43,7 +43,11 @@ class Scraper {
   scrapeUrl(node) {
     const maxScrapesExceeded =
       this.numItemsScraped > SCRAPES_BEFORE_CACHING;
-    if (maxScrapesExceeded) {
+
+    // Only scrape URLs that contain the string 'boulder'
+    const shouldScrapeUrl = node.includes('boulder');
+
+    if (maxScrapesExceeded || !shouldScrapeUrl) {
       return node;
     }
 
