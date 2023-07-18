@@ -1,3 +1,4 @@
+const LRU = require('lru-cache');
 const Bottleneck = require('bottleneck');
 const cheerio = require('cheerio');
 const requestPromise = require('request-promise');
@@ -5,6 +6,9 @@ const { writeFile } = require('fs-extra');
 const { gray, yellow } = require('chalk');
 
 const INDENTATION = 2;
+
+// Create a new cache with a maximum size of 500
+const cache = new LRU(500);
 
 // Create a new limiter with a maximum of 5 requests per second
 const limiter = new Bottleneck({
@@ -14,6 +18,12 @@ const limiter = new Bottleneck({
 
 // Request the given url, load content into cheerio parser, handle errors
 function request(url) {
+  // If the url is in the cache, return the cached value
+  if (cache.has(url)) {
+    return Promise.resolve(cache.get(url));
+  }
+
+  // Otherwise, make a new request
   return new Promise((resolve) => {
     limiter
       .schedule(() =>
@@ -25,6 +35,8 @@ function request(url) {
       )
       .then((data) => {
         process.stdout.write(gray('+'));
+        // Store the result in the cache
+        cache.set(url, data);
         return data;
       })
       .then(resolve)
