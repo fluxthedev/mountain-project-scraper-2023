@@ -5,11 +5,10 @@ const SCRAPES_BEFORE_CACHING = 200;
 
 // A Scraper that requests then extracts data from the Mountain Project
 class Scraper {
-  
   constructor() {
     this.numItemsScraped = 0;
   }
-  
+
   // Reset the scraping threshold
   reset() {
     this.numItemsScraped = 0;
@@ -29,44 +28,43 @@ class Scraper {
 
     if (isUrl) {
       return this.scrapeUrl(node);
-    } 
-    
-    else if (isArray) {
+    } else if (isArray) {
       return this.scrapeArray(node);
-    }
-    
-    else if (isArea) {
+    } else if (isArea) {
       return this.scrapeChildren(node);
-    } 
-    
+    }
+
     // Else, node is a route (leaf node)
-    return new Promise(resolve => resolve(node));
+    return new Promise((resolve) => resolve(node));
   }
 
   // If we've exceed our maximum scrape limit, return the given URL. Otherwise,
   // scrape it
   scrapeUrl(node) {
-    const maxScrapesExceeded = this.numItemsScraped > SCRAPES_BEFORE_CACHING;
+    const maxScrapesExceeded =
+      this.numItemsScraped > SCRAPES_BEFORE_CACHING;
     if (maxScrapesExceeded) {
       return node;
     }
 
     this.numItemsScraped++;
     return request(node)
-      .then($ => extract($, node))
-      .then(node => this.scrape(node));
+      .then(($) => extract($, node))
+      .then((node) => this.scrape(node));
   }
 
-  // Scrape each node in the given array
+  // Scrape each node in the given array concurrently
   scrapeArray(node) {
-    const promises = node.map(subNode => this.scrape(subNode), this);
+    const promises = node.map((subNode) => this.scrape(subNode));
     return Promise.all(promises);
   }
 
   // Return the given area node with each of its children scraped
   scrapeChildren(node) {
-    return this.scrape(node.children)
-      .then(children => ({ ...node, children }));
+    return this.scrape(node.children).then((children) => ({
+      ...node,
+      children,
+    }));
   }
 }
 
