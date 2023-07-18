@@ -53,7 +53,14 @@ function request(url) {
 // Returns a promise that writes data to a file then resolves with the data
 function writeDataToFile(jsonData, fileName) {
   console.log(`\nSaving data to ${fileName}...`);
-  const string = JSON.stringify(jsonData, null, INDENTATION);
+
+  // Convert the JSON data to a string without indentation (minified)
+  let string = JSON.stringify(jsonData);
+
+  // Remove newline characters
+  string = string.replace(/\n/g, '');
+
+  // Write the string to the file
   return writeFile(fileName, string, 'utf8')
     .then(() => console.log(`Data saved!`))
     .then(() => jsonData);
