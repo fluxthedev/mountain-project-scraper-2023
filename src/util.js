@@ -40,8 +40,11 @@ function request(url) {
         return data;
       })
       .then(resolve)
-      .catch(() => {
+      .catch((error) => {
         process.stdout.write(yellow('-'));
+        console.error(
+          `Error occurred while requesting ${url}: ${error.message}`
+        );
         return request(url).then(resolve);
       });
   });
