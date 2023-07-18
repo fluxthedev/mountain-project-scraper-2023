@@ -1,3 +1,4 @@
+const Bottleneck = require('bottleneck');
 const cheerio = require('cheerio');
 const requestPromise = require('request-promise');
 const { writeFile } = require('fs-extra');
@@ -5,27 +6,36 @@ const { gray, yellow } = require('chalk');
 
 const INDENTATION = 2;
 
+// Create a new limiter with a maximum of 5 requests per second
+const limiter = new Bottleneck({
+  maxConcurrent: 1,
+  minTime: 200,
+});
+
 // Request the given url, load content into cheerio parser, handle errors
 function request(url) {
-  return new Promise(resolve => {
-    requestPromise({
-      uri: url,
-      transform: cheerio.load,
-      headers: { 'Connection': 'Keep-Alive' }
-    })
-    .then(data => {
-      process.stdout.write(gray('+'));
-      return data;
-    })
-    .then(resolve)
-    .catch(() => {
-      process.stdout.write(yellow('-'));
-      return request(url).then(resolve);
-    });
+  return new Promise((resolve) => {
+    limiter
+      .schedule(() =>
+        requestPromise({
+          uri: url,
+          transform: cheerio.load,
+          headers: { Connection: 'Keep-Alive' },
+        })
+      )
+      .then((data) => {
+        process.stdout.write(gray('+'));
+        return data;
+      })
+      .then(resolve)
+      .catch(() => {
+        process.stdout.write(yellow('-'));
+        return request(url).then(resolve);
+      });
   });
 }
 
-// Returns a promise that writes data to a file then resolvew with the data
+// Returns a promise that writes data to a file then resolves with the data
 function writeDataToFile(jsonData, fileName) {
   console.log(`\nSaving data to ${fileName}...`);
   const string = JSON.stringify(jsonData, null, INDENTATION);
@@ -36,21 +46,31 @@ function writeDataToFile(jsonData, fileName) {
 
 // Logging helper for promise chains
 function promiseLog(message) {
-  return value => {
+  return (value) => {
     console.log(message);
     return value;
-  }
+  };
 }
 
 // Remove empty fields from an object
 function purgeEmptyFields(obj) {
-  Object.keys(obj).forEach(key => {
+  Object.keys(obj).forEach((key) => {
     const val = obj[key];
-    if (val === '' || val === false || val === undefined || val === null) {
+    if (
+      val === '' ||
+      val === false ||
+      val === undefined ||
+      val === null
+    ) {
       delete obj[key];
     }
   });
   return obj;
 }
 
-module.exports = { request, writeDataToFile, promiseLog, purgeEmptyFields };
+module.exports = {
+  request,
+  writeDataToFile,
+  promiseLog,
+  purgeEmptyFields,
+};
